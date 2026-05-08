@@ -24,27 +24,25 @@ foreach ($orders as $order) {
     $result = curl_exec($ch);
     curl_close($ch);
 
-    echo "الأوردر: $order\n";
-    echo "رد الموقع: $result\n";
-
     $txt = strtolower($result);
 
+    echo "الأوردر: $order\n";
+
     if (
-        strpos($txt, "success") !== false ||
-        strpos($txt, "refill request has been sent") !== false
+        strpos($txt, '"refill"') !== false ||
+        strpos($txt, 'success') !== false
     ) {
-        echo "النتيجة: تمت إعادة التعبئة بنجاح ✅\n";
+        echo "تمت إعادة التعبئة بنجاح ✅\n";
     }
     elseif (
-        strpos($txt, "available in") !== false ||
-        strpos($txt, "hours") !== false ||
-        strpos($txt, "minutes") !== false
+        strpos($txt, 'less than 24 hours ago') !== false
     ) {
-        echo "النتيجة: لسه باقي وقت على إعادة التعبئة ⏳\n";
+        echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
     }
     else {
-        echo "النتيجة: رد غير معروف\n";
+        echo "رد الموقع: $result\n";
     }
 
-    echo "--------------------------\n";
+    echo "------------------\n";
 }
+?>
