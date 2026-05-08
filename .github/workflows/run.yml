@@ -1,0 +1,18 @@
+name: refill
+
+on:
+  schedule:
+    - cron: '0 */26 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run PHP
+        run: php refill.php
+        env:
+          SMMBIND_API_KEY: ${{ secrets.SMMBIND_API_KEY }}
