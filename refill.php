@@ -2,62 +2,49 @@
 
 $api_key = getenv("SMMBIND_API_KEY");
 
-if (!$api_key) {
-    die("API KEY غير موجود\n");
-}
-
 $orders = [
     "217990724",
     "213514284"
 ];
 
-echo "بدء فحص إعادة التعبئة...\n";
+echo "بدء الفحص...\n\n";
 
 foreach ($orders as $order) {
-    $data = [
+
+    $ch = curl_init("https://smmbind.com/api/v2");
+
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, [
         "key" => $api_key,
         "action" => "refill",
         "order" => $order
-    ];
-
-    $ch = curl_init("https://smmbind.com/api/v2");
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    ]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
     $result = curl_exec($ch);
-
-    if (curl_errno($ch)) {
-        echo "الأوردر {$order}: حصل خطأ -> " . curl_error($ch) . "\n";
-        curl_close($ch);
-        continue;
-    }
-
     curl_close($ch);
 
-    $text = strtolower($result);
+    echo "الأوردر: $order\n";
+    echo "رد الموقع: $result\n";
 
-    echo "الأوردر {$order}: ";
+    $txt = strtolower($result);
 
     if (
-        str_contains($text, "success") ||
-        str_contains($text, "refill") && !str_contains($text, "available")
+        strpos($txt, "success") !== false ||
+        strpos($txt, "refill request has been sent") !== false
     ) {
-        echo "تمت إعادة التعبئة بنجاح ✅\n";
-    } elseif (
-        str_contains($text, "available") ||
-        str_contains($text, "hours") ||
-        str_contains($text, "minutes")
+        echo "النتيجة: تمت إعادة التعبئة بنجاح ✅\n";
+    }
+    elseif (
+        strpos($txt, "available in") !== false ||
+        strpos($txt, "hours") !== false ||
+        strpos($txt, "minutes") !== false
     ) {
-        echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
-        echo "رد الموقع: {$result}\n";
-    } else {
-        echo "رد غير معروف من الموقع: {$result}\n";
+        echo "النتيجة: لسه باقي وقت على إعادة التعبئة ⏳\n";
+    }
+    else {
+        echo "النتيجة: رد غير معروف\n";
     }
 
-    sleep(2);
+    echo "--------------------------\n";
 }
-
-echo "انتهى الفحص\n";
-?>
