@@ -6,6 +6,7 @@ echo "بدء الفحص...\n\n";
 
 foreach ($orders as $order) {
     $ch = curl_init("https://smmbind.com/api/v2");
+
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, [
         "key" => $api_key,
@@ -19,14 +20,14 @@ foreach ($orders as $order) {
 
     $txt = strtolower($result);
 
-    echo "الأوردر: " . $order . "\n";
+    echo "الأوردر: $order\n";
 
     if (strpos($txt, "less than 24 hours ago") !== false) {
         echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
     } elseif (strpos($txt, "error") === false) {
         echo "تمت إعادة التعبئة بنجاح ✅\n";
     } else {
-        echo "رد الموقع: " . $result . "\n";
+        echo "رد الموقع: $result\n";
     }
 
     echo "-----------------\n";
