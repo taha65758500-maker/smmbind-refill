@@ -3,7 +3,7 @@
 $api_key = getenv("SMMBIND_API_KEY");
 
 if (!$api_key) {
-    die("API KEY غير موجود");
+    die("API KEY غير موجود\n");
 }
 
 $orders = [
@@ -11,7 +11,7 @@ $orders = [
     "213514284"
 ];
 
-echo "بدء إعادة التعبئة...\n";
+echo "بدء فحص إعادة التعبئة...\n";
 
 foreach ($orders as $order) {
     $data = [
@@ -29,15 +29,35 @@ foreach ($orders as $order) {
     $result = curl_exec($ch);
 
     if (curl_errno($ch)) {
-        echo "الأوردر {$order}: خطأ -> " . curl_error($ch) . "\n";
-    } else {
-        echo "الأوردر {$order}: {$result}\n";
+        echo "الأوردر {$order}: حصل خطأ -> " . curl_error($ch) . "\n";
+        curl_close($ch);
+        continue;
     }
 
     curl_close($ch);
 
+    $text = strtolower($result);
+
+    echo "الأوردر {$order}: ";
+
+    if (
+        str_contains($text, "success") ||
+        str_contains($text, "refill") && !str_contains($text, "available")
+    ) {
+        echo "تمت إعادة التعبئة بنجاح ✅\n";
+    } elseif (
+        str_contains($text, "available") ||
+        str_contains($text, "hours") ||
+        str_contains($text, "minutes")
+    ) {
+        echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
+        echo "رد الموقع: {$result}\n";
+    } else {
+        echo "رد غير معروف من الموقع: {$result}\n";
+    }
+
     sleep(2);
 }
 
-echo "تمت العملية\n";
+echo "انتهى الفحص\n";
 ?>
