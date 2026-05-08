@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: تحميل الملفات
+        uses: actions/checkout@v4
 
-      - name: Run script
+      - name: تشغيل سكربت إعادة التعبئة
         run: php refill.php
         env:
           SMMBIND_API_KEY: ${{ secrets.SMMBIND_API_KEY }}
