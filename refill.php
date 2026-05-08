@@ -28,21 +28,16 @@ foreach ($orders as $order) {
 
     echo "الأوردر: $order\n";
 
-    if (
-        strpos($txt, '"refill"') !== false ||
-        strpos($txt, 'success') !== false
-    ) {
+    if (strpos($txt, '"refill"') !== false || strpos($txt, 'success') !== false) {
         echo "تمت إعادة التعبئة بنجاح ✅\n";
     }
-    elseif (
-        strpos($txt, 'less than 24 hours ago') !== false
-    ) {
+    elseif (strpos($txt, 'less than 24 hours ago') !== false) {
         echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
     }
     else {
-        echo "رد الموقع: $result\n";
+        echo "حالة غير معروفة\n";
     }
 
-    echo "------------------\n";
+    echo "-----------------\n";
 }
 ?>
