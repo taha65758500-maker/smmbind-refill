@@ -1,18 +1,11 @@
 <?php
-
 $api_key = getenv("SMMBIND_API_KEY");
-
-$orders = [
-    "217990724",
-    "213514284"
-];
+$orders = ["217990724", "213514284"];
 
 echo "بدء الفحص...\n\n";
 
 foreach ($orders as $order) {
-
     $ch = curl_init("https://smmbind.com/api/v2");
-
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, [
         "key" => $api_key,
@@ -26,16 +19,14 @@ foreach ($orders as $order) {
 
     $txt = strtolower($result);
 
-    echo "الأوردر: $order\n";
+    echo "الأوردر: " . $order . "\n";
 
-    if (strpos($txt, '"refill"') !== false || strpos($txt, 'success') !== false) {
-        echo "تمت إعادة التعبئة بنجاح ✅\n";
-    }
-    elseif (strpos($txt, 'less than 24 hours ago') !== false) {
+    if (strpos($txt, "less than 24 hours ago") !== false) {
         echo "لسه باقي وقت على إعادة التعبئة ⏳\n";
-    }
-    else {
-        echo "حالة غير معروفة\n";
+    } elseif (strpos($txt, "error") === false) {
+        echo "تمت إعادة التعبئة بنجاح ✅\n";
+    } else {
+        echo "رد الموقع: " . $result . "\n";
     }
 
     echo "-----------------\n";
