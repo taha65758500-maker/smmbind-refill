@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run PHP
+      - name: Run script
         run: php refill.php
         env:
           SMMBIND_API_KEY: ${{ secrets.SMMBIND_API_KEY }}
