@@ -32,59 +32,61 @@ function sendTelegram($message)
 
     $context = stream_context_create($options);
 
-    $result = @file_get_contents($url, false, $context);
-
-    if ($result === FALSE) {
-        echo "Telegram Error\n";
-    }
+    @file_get_contents($url, false, $context);
 }
+
+$state_file = "last_order.txt";
+
+$current_index = 0;
+
+if (file_exists($state_file)) {
+    $current_index = (int) file_get_contents($state_file);
+}
+
+$order_id = $orders[$current_index];
+
+$next_index = ($current_index + 1) % count($orders);
+
+file_put_contents($state_file, $next_index);
 
 sendTelegram("🚀 بدأ فحص إعادة التعبئة الآن");
 
-foreach ($orders as $order_id) {
+$url = "https://smmbind.com/api/v2";
 
-    $url = "https://smmbind.com/api/v2";
+$data = [
+    "key" => $api_key,
+    "action" => "refill",
+    "order" => $order_id
+];
 
-    $data = [
-        "key" => $api_key,
-        "action" => "refill",
-        "order" => $order_id
-    ];
+$options = [
+    "http" => [
+        "header"  => "Content-type: application/x-www-form-urlencoded",
+        "method"  => "POST",
+        "content" => http_build_query($data),
+        "timeout" => 20
+    ]
+];
 
-    $options = [
-        "http" => [
-            "header"  => "Content-type: application/x-www-form-urlencoded",
-            "method"  => "POST",
-            "content" => http_build_query($data),
-            "timeout" => 20
-        ]
-    ];
+$context = stream_context_create($options);
 
-    $context = stream_context_create($options);
+$result = @file_get_contents($url, false, $context);
 
-    $result = @file_get_contents($url, false, $context);
+$response = json_decode($result, true);
 
-    $response = json_decode($result, true);
+if (isset($response["refill"])) {
 
-    if (isset($response["refill"])) {
+    $message = "✅ الأوردر {$order_id}\nتمت إعادة التعبئة بنجاح";
 
-        $message = "✅ الأوردر {$order_id}\nتمت إعادة التعبئة بنجاح";
+} else {
 
-        echo $message . "\n";
-
-        sendTelegram($message);
-
-    } else {
-
-        $message = "⏳ الأوردر {$order_id}\nلسه باقي وقت على إعادة التعبئة";
-
-        echo $message . "\n";
-
-        sendTelegram($message);
-    }
-
-    sleep(5);
+    $message = "⏳ الأوردر {$order_id}\nلسه باقي وقت على إعادة التعبئة";
 }
 
+echo $message;
+
+sendTelegram($message);
+
 sendTelegram("✅ انتهى فحص إعادة التعبئة");
+
 ?>
