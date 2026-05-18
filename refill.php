@@ -2,56 +2,89 @@
 
 $api_key = getenv("SMMBIND_API_KEY");
 
+$telegram_token = getenv("TELEGRAM_BOT_TOKEN");
+$telegram_chat_id = getenv("TELEGRAM_CHAT_ID");
+
 $orders = [
     "217990724",
     "213514284"
 ];
 
-$state_file = "last_order.txt";
+function sendTelegram($message)
+{
+    global $telegram_token, $telegram_chat_id;
 
-$current_index = 0;
+    $url = "https://api.telegram.org/bot{$telegram_token}/sendMessage";
 
-if (file_exists($state_file)) {
-    $current_index = (int) file_get_contents($state_file);
+    $data = [
+        "chat_id" => $telegram_chat_id,
+        "text" => $message
+    ];
+
+    $options = [
+        "http" => [
+            "header"  => "Content-type: application/x-www-form-urlencoded",
+            "method"  => "POST",
+            "content" => http_build_query($data),
+            "timeout" => 20
+        ]
+    ];
+
+    $context = stream_context_create($options);
+
+    $result = @file_get_contents($url, false, $context);
+
+    if ($result === FALSE) {
+        echo "Telegram Error\n";
+    }
 }
 
-$order_id = $orders[$current_index];
+sendTelegram("🚀 بدأ فحص إعادة التعبئة الآن");
 
-$next_index = ($current_index + 1) % count($orders);
+foreach ($orders as $order_id) {
 
-file_put_contents($state_file, $next_index);
+    $url = "https://smmbind.com/api/v2";
 
-echo "🚀 بدء فحص إعادة التعبئة الآن\n\n";
+    $data = [
+        "key" => $api_key,
+        "action" => "refill",
+        "order" => $order_id
+    ];
 
-$url = "https://smmbind.com/api/v2";
+    $options = [
+        "http" => [
+            "header"  => "Content-type: application/x-www-form-urlencoded",
+            "method"  => "POST",
+            "content" => http_build_query($data),
+            "timeout" => 20
+        ]
+    ];
 
-$data = [
-    "key" => $api_key,
-    "action" => "refill",
-    "order" => $order_id
-];
+    $context = stream_context_create($options);
 
-$options = [
-    "http" => [
-        "header"  => "Content-type: application/x-www-form-urlencoded",
-        "method"  => "POST",
-        "content" => http_build_query($data),
-    ],
-];
+    $result = @file_get_contents($url, false, $context);
 
-$context = stream_context_create($options);
+    $response = json_decode($result, true);
 
-$result = file_get_contents($url, false, $context);
+    if (isset($response["refill"])) {
 
-$response = json_decode($result, true);
+        $message = "✅ الأوردر {$order_id}\nتمت إعادة التعبئة بنجاح";
 
-echo "الأوردر {$order_id}\n";
+        echo $message . "\n";
 
-if (isset($response["refill"])) {
-    echo "✅ تمت إعادة التعبئة بنجاح\n";
-} else {
-    echo "⏳ لسه باقي وقت على إعادة التعبئة\n";
+        sendTelegram($message);
+
+    } else {
+
+        $message = "⏳ الأوردر {$order_id}\nلسه باقي وقت على إعادة التعبئة";
+
+        echo $message . "\n";
+
+        sendTelegram($message);
+    }
+
+    sleep(5);
 }
 
-echo "\n✅ انتهى فحص إعادة التعبئة\n";
+sendTelegram("✅ انتهى فحص إعادة التعبئة");
 ?>
