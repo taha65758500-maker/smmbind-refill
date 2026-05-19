@@ -7,16 +7,18 @@ $api_key = getenv("SMMBIND_API_KEY");
 $telegram_token = getenv("TELEGRAM_BOT_TOKEN");
 $telegram_chat_id = getenv("TELEGRAM_CHAT_ID");
 
+
+
+/*
+|--------------------------------------------------------------------------
+| الأوردرات
+|--------------------------------------------------------------------------
+*/
+
 $orders = [
     "217990724",
     "213514284"
 ];
-
-$cooldown_hours = 2;
-
-$state_file = "orders_state.json";
-
-$lock_file = "script.lock";
 
 
 
@@ -25,6 +27,8 @@ $lock_file = "script.lock";
 | منع تشغيل الاسكريبت مرتين مع بعض
 |--------------------------------------------------------------------------
 */
+
+$lock_file = "script.lock";
 
 $lock = fopen($lock_file, "c");
 
@@ -73,95 +77,42 @@ function sendTelegram($message)
 
 /*
 |--------------------------------------------------------------------------
-| تحميل الحالة القديمة
+| نظام التبديل بين الأوردرات
 |--------------------------------------------------------------------------
 */
 
-$state = [];
+$rotation_file = "rotation.txt";
 
-if (file_exists($state_file)) {
+$current_index = 0;
 
-    $json = file_get_contents($state_file);
+if (file_exists($rotation_file)) {
 
-    $state = json_decode($json, true);
+    $saved = file_get_contents($rotation_file);
 
-    if (!is_array($state)) {
-        $state = [];
+    if (is_numeric($saved)) {
+        $current_index = (int) $saved;
     }
 }
 
-
-
-/*
-|--------------------------------------------------------------------------
-| إنشاء حالة أولية لكل الأوردرات
-|--------------------------------------------------------------------------
-*/
-
-$current_time = time();
-
-foreach ($orders as $index => $order_id) {
-
-    if (!isset($state[$order_id])) {
-
-        $state[$order_id] = [
-            "last_refill" => 0,
-
-            // توزيع الأوردرات على ساعات مختلفة
-            "next_refill" => $current_time + ($index * 3600)
-        ];
-    }
+if ($current_index >= count($orders)) {
+    $current_index = 0;
 }
 
+$order_to_process = $orders[$current_index];
 
+$next_index = ($current_index + 1) % count($orders);
 
-/*
-|--------------------------------------------------------------------------
-| اختيار الأوردر المستحق فقط
-|--------------------------------------------------------------------------
-*/
-
-$order_to_process = null;
-
-foreach ($orders as $order_id) {
-
-    if ($current_time >= $state[$order_id]["next_refill"]) {
-
-        $order_to_process = $order_id;
-
-        break;
-    }
-}
+file_put_contents($rotation_file, $next_index);
 
 
 
 /*
 |--------------------------------------------------------------------------
-| لا يوجد أوردر مستحق الآن
+| بدء الفحص
 |--------------------------------------------------------------------------
 */
 
-if (!$order_to_process) {
-
-    echo "No refill needed now";
-
-    sendTelegram("⏳ لا يوجد أي أوردر مستحق لإعادة التعبئة الآن");
-
-    flock($lock, LOCK_UN);
-    fclose($lock);
-
-    exit;
-}
-
-
-
-/*
-|--------------------------------------------------------------------------
-| بدء العملية
-|--------------------------------------------------------------------------
-*/
-
-sendTelegram("🚀 بدء إعادة التعبئة للأوردر {$order_to_process}");
+sendTelegram("🚀 بدء فحص إعادة التعبئة للأوردر {$order_to_process}");
 
 
 
@@ -204,21 +155,10 @@ $response = json_decode($result, true);
 
 if (isset($response["refill"])) {
 
-    $state[$order_to_process]["last_refill"] = $current_time;
-
-    $state[$order_to_process]["next_refill"] =
-        $current_time + ($cooldown_hours * 3600);
-
-    file_put_contents(
-        $state_file,
-        json_encode($state, JSON_PRETTY_PRINT)
-    );
-
     $message =
         "✅ تمت إعادة التعبئة بنجاح\n\n" .
         "📦 الأوردر: {$order_to_process}\n" .
-        "🆔 Refill ID: {$response["refill"]}\n" .
-        "⏰ إعادة التعبئة القادمة بعد ساعتين";
+        "🆔 Refill ID: {$response["refill"]}";
 
     echo $message;
 
@@ -226,18 +166,16 @@ if (isset($response["refill"])) {
 
 } else {
 
-    $state[$order_to_process]["next_refill"] =
-        $current_time + 1800;
+    $error_text = $result;
 
-    file_put_contents(
-        $state_file,
-        json_encode($state, JSON_PRETTY_PRINT)
-    );
+    if (isset($response["error"])) {
+        $error_text = $response["error"];
+    }
 
     $message =
-        "⚠️ فشل أو لم يسمح الموقع بإعادة التعبئة الآن\n\n" .
-        "📦 الأوردر: {$order_to_process}\n" .
-        "🔁 سيتم المحاولة بعد 30 دقيقة";
+        "⏳ لم يسمح الموقع بإعادة التعبئة الآن\n\n" .
+        "📦 الأوردر: {$order_to_process}\n\n" .
+        "🧾 رد الموقع:\n{$error_text}";
 
     echo $message;
 
@@ -248,7 +186,7 @@ if (isset($response["refill"])) {
 
 /*
 |--------------------------------------------------------------------------
-| إنهاء
+| انتهاء الفحص
 |--------------------------------------------------------------------------
 */
 
