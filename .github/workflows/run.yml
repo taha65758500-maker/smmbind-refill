@@ -2,27 +2,16 @@ name: refill
 
 on:
   schedule:
-    # تشغيل كل ساعة
-    - cron: '0 * * * *'
-
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
-    concurrency:
-      group: refill-job
-      cancel-in-progress: false
-
     steps:
       - name: تحميل الملفات
         uses: actions/checkout@v4
-
-      - name: إعداد PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
 
       - name: تشغيل سكربت إعادة التعبئة
         run: php refill.php
